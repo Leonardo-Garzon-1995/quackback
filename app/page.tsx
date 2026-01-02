@@ -9,6 +9,8 @@ export default function Home() {
 
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<LocalMessage[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -27,12 +29,13 @@ export default function Home() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
-    const aiResponse = mockDuckAI(input);
-    // optimistic update
-    setMessages((prev) => [{ user: input, ai: aiResponse }, ...prev]);
-    setInput("");
-
+    setLoading(true);
+    setError(null);
     try {
+      const aiResponse = await askGemini(input);
+      // optimistic update
+      setMessages((prev) => [{ user: input, ai: aiResponse }, ...prev]);
+      setInput("");
       await fetch("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -41,26 +44,9 @@ export default function Home() {
       // optionally re-fetch to get server data
       // const res = await fetch('/api/messages'); const data = await res.json(); setMessages(data);
     } catch (err) {
-      console.error("Failed to save message", err);
+      setError("Failed to get response from Gemini or save message.");
+      console.error("Failed to save message or get Gemini response", err);
     }
-  const [messages, setMessages] = useState<{ user: string; ai: string[] }[]>(
-    []
-  );
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const aiResponse = await askGemini(input);
-      setMessages([...messages, { user: input, ai: aiResponse }]);
-    } catch (err: any) {
-      setError("Failed to get response from Gemini.");
-    }
-    setInput("");
     setLoading(false);
   };
 
