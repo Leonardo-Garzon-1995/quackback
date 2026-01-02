@@ -18,7 +18,8 @@ export default function Home() {
         const res = await fetch("/api/messages");
         if (res.ok) {
           const data = await res.json();
-          setMessages(data);
+          // Reverse here so messages are newest first in state
+          setMessages(data.reverse());
         }
       } catch (err) {
         console.error("Failed to load messages", err);
@@ -120,7 +121,17 @@ export default function Home() {
             {error}
           </div>
         )}
-        <div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            overflowY: "auto",
+            maxHeight: 400,
+            width: "100%",
+            marginBottom: 24,
+            paddingRight: 8,
+          }}
+        >
           {messages.map((msg, idx) => (
             <div key={idx} style={{ marginBottom: 24 }}>
               <div

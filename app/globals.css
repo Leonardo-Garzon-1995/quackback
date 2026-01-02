@@ -29,8 +29,8 @@
   --color-primary-yellow: #F4C430;
   --color-primary-text: #EAEAF0;
   --color-secondary-text: #9CA3AF;
-  --color-insight-accent: #2DD4BF;
-  --color-warning: #FB7185;
+  --color-insight-accent: #3FADDB;
+  --color-warning: #EE7B54;
 }
 body {
   background: var(--background);
