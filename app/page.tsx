@@ -5,7 +5,18 @@ import Image from "next/image";
 import { askGemini, GeminiMessage } from "./gemini";
 
 export default function Home() {
-  type LocalMessage = Message | { user: string; ai: string[] };
+  // User ID for per-user conversations
+  function getUserId() {
+    if (typeof window === "undefined") return "";
+    let id = localStorage.getItem("userId");
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem("userId", id);
+    }
+    return id;
+  }
+  const userId = typeof window !== "undefined" ? getUserId() : "";
+  type LocalMessage = Message | { user: string; ai: string | string[] };
 
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<LocalMessage[]>([]);
@@ -19,7 +30,7 @@ export default function Home() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/conversations");
+        const res = await fetch(`/api/conversations?userId=${userId}`);
         if (res.ok) {
           const data = await res.json();
           setConversations(data);
@@ -35,7 +46,9 @@ export default function Home() {
     (async () => {
       if (!activeConv) return;
       try {
-        const res = await fetch(`/api/conversations/${activeConv}`);
+        const res = await fetch(
+          `/api/conversations/${activeConv}?userId=${userId}`
+        );
         if (res.ok) {
           const data = await res.json();
           setMessages(data.messages ?? []);
@@ -51,11 +64,13 @@ export default function Home() {
       const res = await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: title || "New conversation" }),
+        body: JSON.stringify({ title: title || "New conversation", userId }),
       });
       const body = await res.json();
       if (body.insertedId) {
-        const cRes = await fetch(`/api/conversations/${body.insertedId}`);
+        const cRes = await fetch(
+          `/api/conversations/${body.insertedId}?userId=${userId}`
+        );
         const conv = await cRes.json();
         setConversations((prev) => [conv, ...prev]);
         setActiveConv(body.insertedId);
@@ -90,13 +105,20 @@ export default function Home() {
     try {
       // Build conversation history for Gemini
       const conversation: GeminiMessage[] = [
-        ...messages.flatMap((msg) => [
-          { role: "user" as const, parts: [{ text: msg.user }] },
-          ...msg.ai.map((a) => ({
-            role: "model" as const,
-            parts: [{ text: a }],
-          })),
-        ]),
+        ...messages.flatMap((msg) => {
+          const aiArr = Array.isArray(msg.ai)
+            ? msg.ai
+            : typeof msg.ai === "string"
+            ? msg.ai.split(/\n+/)
+            : [];
+          return [
+            { role: "user" as const, parts: [{ text: msg.user }] },
+            ...aiArr.map((a) => ({
+              role: "model" as const,
+              parts: [{ text: a }],
+            })),
+          ];
+        }),
         { role: "user" as const, parts: [{ text: input }] },
       ];
 
@@ -112,11 +134,13 @@ export default function Home() {
       await fetch(`/api/conversations/${activeConv}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user: input, ai: aiResponse }),
+        body: JSON.stringify({ user: input, ai: aiResponse, userId }),
       });
 
       // refresh conversations list updatedAt
-      const convs = await (await fetch("/api/conversations")).json();
+      const convs = await (
+        await fetch(`/api/conversations?userId=${userId}`)
+      ).json();
       setConversations(convs);
     } catch (err: any) {
       setError("Failed to get response from Gemini.");
@@ -489,20 +513,37 @@ export default function Home() {
                   Duck:
                 </div>
                 <ul style={{ margin: 0, paddingLeft: 20 }}>
-                  {msg.ai.map((q, i) => (
-                    <li
-                      key={i}
-                      style={{
-                        color:
-                          i === 2
-                            ? "var(--color-warning)"
-                            : "var(--color-insight-accent)",
-                        marginBottom: 2,
-                      }}
-                    >
-                      {q}
-                    </li>
-                  ))}
+                  {Array.isArray(msg.ai)
+                    ? msg.ai.map((q, i) => (
+                        <li
+                          key={i}
+                          style={{
+                            color:
+                              i === 2
+                                ? "var(--color-warning)"
+                                : "var(--color-insight-accent)",
+                            marginBottom: 2,
+                          }}
+                        >
+                          {q}
+                        </li>
+                      ))
+                    : String(msg.ai)
+                        .split(/\n+/)
+                        .map((q, i) => (
+                          <li
+                            key={i}
+                            style={{
+                              color:
+                                i === 2
+                                  ? "var(--color-warning)"
+                                  : "var(--color-insight-accent)",
+                              marginBottom: 2,
+                            }}
+                          >
+                            {q}
+                          </li>
+                        ))}
                 </ul>
               </div>
             ))}

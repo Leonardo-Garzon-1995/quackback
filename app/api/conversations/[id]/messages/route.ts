@@ -16,16 +16,25 @@ type Conversation = {
   updatedAt?: Date;
 };
 
-export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function POST(req: Request, { params }: { params: any }) {
   try {
-    const id = params?.id; // ✅ no await
+    // Unwrap params if it's a Promise (Next.js dynamic API route fix)
+    const awaitedParams =
+      typeof params?.then === "function" ? await params : params;
+    const id = awaitedParams?.id;
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-    const { user, ai } = await req.json();
-    if (typeof user !== "string" || typeof ai !== "string") {
+    const body = await req.json();
+    const { user, ai, userId } = body;
+    let aiText = ai;
+    if (Array.isArray(ai)) {
+      aiText = ai.join("\n");
+    }
+    if (
+      typeof user !== "string" ||
+      typeof aiText !== "string" ||
+      typeof userId !== "string"
+    ) {
       return NextResponse.json({ error: "Missing payload" }, { status: 400 });
     }
 
@@ -38,19 +47,28 @@ export async function POST(
     const conversations: Collection<Conversation> =
       db.collection<Conversation>("conversations");
 
-    const conv = await conversations.findOneAndUpdate(
-      { _id: oid },
+    const result = await conversations.findOneAndUpdate(
+      { _id: oid, userId },
       {
-        $push: { messages: { user, ai, createdAt: now } },
+        $push: { messages: { user, ai: aiText, createdAt: now } },
         $set: { updatedAt: now },
-        // optional: ensures these exist for new docs if you ever add upsert
-        // $setOnInsert: { createdAt: now, messages: [] },
       },
       { returnDocument: "after" }
     );
 
-    if (!conv) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const conv = (
+      result && "value" in result ? result.value : result
+    ) as Conversation | null;
+    if (
+      !conv ||
+      !conv.messages ||
+      !Array.isArray(conv.messages) ||
+      conv.messages.length === 0
+    ) {
+      return NextResponse.json(
+        { error: "Not found or no messages" },
+        { status: 404 }
+      );
     }
 
     const lastMsg = conv.messages[conv.messages.length - 1];
@@ -58,11 +76,12 @@ export async function POST(
     return NextResponse.json({
       message: {
         ...lastMsg,
-        createdAt: lastMsg?.createdAt ? lastMsg.createdAt.toISOString() : null,
+        createdAt: lastMsg?.createdAt
+          ? new Date(lastMsg.createdAt).toISOString()
+          : null,
       },
     });
   } catch (err) {
-    console.error(err);
     return NextResponse.json({ error: "server error" }, { status: 500 });
   }
 }
