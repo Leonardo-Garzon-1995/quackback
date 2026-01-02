@@ -2,16 +2,7 @@
 import React, { useState, useEffect } from "react";
 import type { Message } from "../types/message";
 import Image from "next/image";
-
-const mockDuckAI = (input: string): string[] => {
-  // This mock AI only responds with questions for clarity, insight, risks, or assumptions
-  return [
-    "Can you clarify what outcome you're hoping for?",
-    "What assumptions are you making about this situation?",
-    "Are there any risks you foresee if you proceed?",
-    "How might you approach this differently?",
-  ];
-};
+import { askGemini } from "./gemini";
 
 export default function Home() {
   type LocalMessage = Message | { user: string; ai: string[] };
@@ -52,6 +43,25 @@ export default function Home() {
     } catch (err) {
       console.error("Failed to save message", err);
     }
+  const [messages, setMessages] = useState<{ user: string; ai: string[] }[]>(
+    []
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const aiResponse = await askGemini(input);
+      setMessages([...messages, { user: input, ai: aiResponse }]);
+    } catch (err: any) {
+      setError("Failed to get response from Gemini.");
+    }
+    setInput("");
+    setLoading(false);
   };
 
   return (
@@ -79,7 +89,7 @@ export default function Home() {
           style={{ marginBottom: 12 }}
           priority
         />
-        
+
         <p style={{ color: "var(--color-secondary-text)", marginBottom: 24 }}>
           Ask a question or post a comment. The Duck will only respond with
           questions to help you think deeper!
@@ -100,6 +110,7 @@ export default function Home() {
               background: "var(--color-bg)",
               color: "var(--color-primary-text)",
             }}
+            disabled={loading}
           />
           <button
             type="submit"
@@ -110,11 +121,19 @@ export default function Home() {
               borderRadius: 8,
               padding: "0 20px",
               fontWeight: 700,
+              opacity: loading ? 0.6 : 1,
+              cursor: loading ? "not-allowed" : "pointer",
             }}
+            disabled={loading}
           >
-            Ask
+            {loading ? "Thinking..." : "Ask"}
           </button>
         </form>
+        {error && (
+          <div style={{ color: "var(--color-warning)", marginBottom: 16 }}>
+            {error}
+          </div>
+        )}
         <div>
           {messages.map((msg, idx) => (
             <div key={idx} style={{ marginBottom: 24 }}>
