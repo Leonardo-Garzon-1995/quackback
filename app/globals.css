@@ -19,8 +19,23 @@
   }
 }
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: #0B1020;
+  --color-surface: #151C2F;
+  --color-primary-yellow: #F4C430;
+  --color-primary-text: #EAEAF0;
+  --color-secondary-text: #9CA3AF;
+  --color-insight-accent: #2DD4BF;
+  --color-warning: #FB7185;
+}
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-primary-text);
 }
