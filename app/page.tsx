@@ -70,7 +70,17 @@ export default function Home() {
         body: JSON.stringify({ title: editTitleValue.trim() }),
       });
       if (!res.ok) throw new Error("Failed to save title");
-      setConversations((prev) => prev.map((c) => (c._id === id ? { ...c, title: editTitleValue.trim(), updatedAt: new Date().toISOString() } : c)));
+      setConversations((prev) =>
+        prev.map((c) =>
+          c._id === id
+            ? {
+                ...c,
+                title: editTitleValue.trim(),
+                updatedAt: new Date().toISOString(),
+              }
+            : c
+        )
+      );
       setEditingTitleId(null);
     } catch (e) {
       console.error(e);
@@ -115,7 +125,6 @@ export default function Home() {
       }
     })();
   }, []);
-
 
   const handleAhaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,7 +179,6 @@ export default function Home() {
       console.error("Failed to create new conversation", e);
     }
   };
-
 
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
@@ -233,7 +241,9 @@ export default function Home() {
             });
             // update local conversations list
             setConversations((prev) =>
-              prev.map((c) => (c._id === activeConv ? { ...c, title: generated } : c))
+              prev.map((c) =>
+                c._id === activeConv ? { ...c, title: generated } : c
+              )
             );
           } catch (e) {
             console.error("Failed to update conversation title", e);
@@ -296,7 +306,6 @@ export default function Home() {
             >
               New
             </button>
-
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {conversations.map((c) => (
@@ -306,7 +315,8 @@ export default function Home() {
                 tabIndex={0}
                 onClick={() => loadConversation(c._id)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") loadConversation(c._id);
+                  if (e.key === "Enter" || e.key === " ")
+                    loadConversation(c._id);
                 }}
                 style={{
                   textAlign: "left",
@@ -322,7 +332,14 @@ export default function Home() {
                   userSelect: "none",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "space-between" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    justifyContent: "space-between",
+                  }}
+                >
                   {editingTitleId === c._id ? (
                     <form
                       onSubmit={async (e) => {
@@ -330,20 +347,41 @@ export default function Home() {
                         if (!editTitleValue.trim()) return;
                         await saveConversationTitle(c._id);
                       }}
-                      style={{ display: "flex", gap: 8, alignItems: "center", width: "100%" }}
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        alignItems: "center",
+                        width: "100%",
+                      }}
                       onClick={(e) => e.stopPropagation()}
                     >
                       <input
                         value={editTitleValue}
                         onChange={(e) => setEditTitleValue(e.target.value)}
-                        style={{ flex: 1, padding: 6, borderRadius: 6, border: "1px solid #ccc" }}
+                        style={{
+                          flex: 1,
+                          padding: 6,
+                          borderRadius: 6,
+                          border: "1px solid #ccc",
+                        }}
                         autoFocus
                         maxLength={80}
                       />
-                      <button type="submit" disabled={editingSaving} style={{ padding: "6px 8px", borderRadius: 6 }}>
+                      <button
+                        type="submit"
+                        disabled={editingSaving}
+                        style={{ padding: "6px 8px", borderRadius: 6 }}
+                      >
                         {editingSaving ? "Saving..." : "Save"}
                       </button>
-                      <button type="button" onClick={(e) => { e.stopPropagation(); setEditingTitleId(null); }} style={{ padding: "6px 8px", borderRadius: 6 }}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingTitleId(null);
+                        }}
+                        style={{ padding: "6px 8px", borderRadius: 6 }}
+                      >
                         Cancel
                       </button>
                     </form>
@@ -352,13 +390,37 @@ export default function Home() {
                       <div style={{ fontWeight: 600 }}>
                         {c.title ?? "Conversation"}
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ fontSize: 12, color: "var(--color-secondary-text)", marginRight: 8 }}>
-                          {new Date(c.updatedAt ?? c.createdAt).toLocaleString()}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "var(--color-secondary-text)",
+                            marginRight: 8,
+                          }}
+                        >
+                          {new Date(
+                            c.updatedAt ?? c.createdAt
+                          ).toLocaleString()}
                         </div>
                         <button
-                          onClick={(e) => { e.stopPropagation(); setEditingTitleId(c._id); setEditTitleValue(c.title ?? ""); }}
-                          style={{ background: "transparent", border: "none", color: "var(--color-primary-yellow)", cursor: "pointer", padding: 0 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingTitleId(c._id);
+                            setEditTitleValue(c.title ?? "");
+                          }}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            color: "var(--color-primary-yellow)",
+                            cursor: "pointer",
+                            padding: 0,
+                          }}
                         >
                           Edit
                         </button>
@@ -379,9 +441,12 @@ export default function Home() {
                       )
                         return;
                       try {
-                        const res = await fetch(`/api/conversations/${c._id}?userId=${userId}`, {
-                          method: "DELETE",
-                        });
+                        const res = await fetch(
+                          `/api/conversations/${c._id}?userId=${userId}`,
+                          {
+                            method: "DELETE",
+                          }
+                        );
                         if (!res.ok) throw new Error("Delete failed");
                         setConversations((prev) =>
                           prev.filter((x) => x._id !== c._id)
@@ -405,9 +470,12 @@ export default function Home() {
                       )
                         return;
                       try {
-                        const res = await fetch(`/api/conversations/${c._id}?userId=${userId}`, {
-                          method: "DELETE",
-                        });
+                        const res = await fetch(
+                          `/api/conversations/${c._id}?userId=${userId}`,
+                          {
+                            method: "DELETE",
+                          }
+                        );
                         if (!res.ok) throw new Error("Delete failed");
                         setConversations((prev) =>
                           prev.filter((x) => x._id !== c._id)
@@ -643,7 +711,12 @@ export default function Home() {
           )}
           <form
             onSubmit={handleSubmit}
-            style={{ display: "flex", gap: 8, marginBottom: 8, flexDirection: "column" }}
+            style={{
+              display: "flex",
+              gap: 8,
+              marginBottom: 8,
+              flexDirection: "column",
+            }}
           >
             <div style={{ display: "flex", gap: 8 }}>
               <input
@@ -651,34 +724,19 @@ export default function Home() {
                 value={input}
                 onFocus={async () => {
                   // Only show starter prompts if this conversation has no messages yet
-                  // Show suggestions only if there are no messages in this conversation
                   if (!messages || messages.length === 0) {
                     setPromptsVisible(true);
                     if (starterPrompts.length === 0 && !loadingPrompts) {
                       setLoadingPrompts(true);
-                      // include recent conversations as context when available
-                      const recent = (conversations || [])
-                        .filter((cc) => cc._id !== activeConv)
-                        .slice(0, 3)
-                        .map((cc) => ({
-                          title: cc.title,
-                          lastMessage:
-                            (Array.isArray(cc.messages) && cc.messages.length
-                              ? cc.messages[cc.messages.length - 1].user
-                              : "") || "",
-                        }));
-
                       const mod = await import("./gemini");
-                      const p = await mod.getStarterPrompts({ recentConversations: recent });
-
+                      const p = await mod.getStarterPrompts();
                       // client-side fallback if Gemini returned nothing
                       const fallback = [
                         "What's the main challenge I'm facing?",
                         "How can I improve this idea?",
                         "What am I missing in my approach?",
                       ];
-
-                      setStarterPrompts((p && p.length ? p : fallback));
+                      setStarterPrompts(p && p.length ? p : fallback);
                       setLoadingPrompts(false);
                     }
                   } else {
@@ -720,9 +778,18 @@ export default function Home() {
             </div>
 
             {promptsVisible && (
-              <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  marginTop: 8,
+                  flexWrap: "wrap",
+                }}
+              >
                 {loadingPrompts ? (
-                  <div style={{ color: "var(--color-secondary-text)" }}>Loading suggestions…</div>
+                  <div style={{ color: "var(--color-secondary-text)" }}>
+                    Loading suggestions…
+                  </div>
                 ) : (
                   (starterPrompts || []).map((p, i) => (
                     <button
@@ -754,7 +821,14 @@ export default function Home() {
 
             {/* Dynamic loading message shown while the Duck is thinking */}
             {loading && (
-              <div style={{ color: "var(--color-secondary-text)", fontSize: 13, marginTop: 8 }} aria-live="polite">
+              <div
+                style={{
+                  color: "var(--color-secondary-text)",
+                  fontSize: 13,
+                  marginTop: 8,
+                }}
+                aria-live="polite"
+              >
                 {loadingMessages[loadingMessageIndex]}
               </div>
             )}
