@@ -10,16 +10,39 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing GEMINI_API_KEY" }, { status: 500 });
     }
 
+    // Accept optional context: { recentConversations: [{ title, lastMessage }] }
+    let payload: any = {};
+    try {
+      payload = (await req.json()) || {};
+    } catch (e) {
+      payload = {};
+    }
+
+    const systemText =
+      "You are Rubber Duck AI. Provide a short list (3–6) of concise starter prompts (3–10 words each) that a user could ask to start a helpful conversation. Return ONLY valid JSON that matches the schema. No preamble, no markdown.";
+
+    const contents: any[] = [];
+
+    if (Array.isArray(payload.recentConversations) && payload.recentConversations.length) {
+      // Build a compact context string to send to Gemini
+      const ctx = payload.recentConversations
+        .slice(0, 3)
+        .map((c: any, i: number) => {
+          const title = c.title ? `Title: ${c.title}` : "";
+          const last = c.lastMessage ? `Last message: ${c.lastMessage}` : "";
+          return `Conversation ${i + 1}: ${title}${last ? " — " + last : ""}`;
+        })
+        .join("\n");
+
+      contents.push({ role: "system", parts: [{ text: `Use the following previous conversation context to make suggestions:
+${ctx}` }] });
+    }
+
+    contents.push({ role: "user", parts: [{ text: "Provide starter prompts" }] });
+
     const body = {
-      systemInstruction: {
-        parts: [
-          {
-            text:
-              "You are Rubber Duck AI. Provide a short list (3–6) of concise starter prompts (3–10 words each) that a user could ask to start a helpful conversation. Return ONLY valid JSON that matches the schema. No preamble, no markdown.",
-          },
-        ],
-      },
-      contents: [{ role: "user", parts: [{ text: "Provide starter prompts" }] }],
+      systemInstruction: { parts: [{ text: systemText }] },
+      contents,
       generationConfig: {
         max_output_tokens: 128,
         temperature: 0.2,

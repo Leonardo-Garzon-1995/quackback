@@ -633,7 +633,18 @@ export default function Home() {
                     setPromptsVisible(true);
                     if (starterPrompts.length === 0 && !loadingPrompts) {
                       setLoadingPrompts(true);
-                      const p = await (await import("./gemini")).getStarterPrompts();
+                      // include recent conversations as context when available
+                      const recent = (conversations || [])
+                        .filter((cc) => cc._id !== activeConv)
+                        .slice(0, 3)
+                        .map((cc) => ({
+                          title: cc.title,
+                          lastMessage:
+                            (Array.isArray(cc.messages) && cc.messages.length
+                              ? cc.messages[cc.messages.length - 1].user
+                              : "") || "",
+                        }));
+                      const p = await (await import("./gemini")).getStarterPrompts({ recentConversations: recent });
                       setStarterPrompts(p);
                       setLoadingPrompts(false);
                     }

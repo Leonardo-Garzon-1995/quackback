@@ -41,12 +41,12 @@ export async function generateTitle(text: string): Promise<string | null> {
   }
 }
 
-export async function getStarterPrompts(): Promise<string[]> {
+export async function getStarterPrompts(context?: { recentConversations?: Array<{ title?: string; lastMessage?: string }> }): Promise<string[]> {
   try {
     const res = await fetch("/api/gemini/prompts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
+      body: JSON.stringify(context || {}),
     });
     if (!res.ok) return [];
     const data = await res.json();
