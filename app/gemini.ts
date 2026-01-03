@@ -40,3 +40,18 @@ export async function generateTitle(text: string): Promise<string | null> {
     return null;
   }
 }
+
+export async function getStarterPrompts(): Promise<string[]> {
+  try {
+    const res = await fetch("/api/gemini/prompts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data?.prompts) ? data.prompts : [];
+  } catch (e) {
+    return [];
+  }
+}

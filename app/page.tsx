@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import type { Message } from "../types/message";
 import Image from "next/image";
 import { askGemini, GeminiMessage, generateTitle } from "./gemini";
@@ -27,6 +27,12 @@ export default function Home() {
   const [activeConv, setActiveConv] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Starter prompts state
+  const [starterPrompts, setStarterPrompts] = useState<string[]>([]);
+  const [promptsVisible, setPromptsVisible] = useState(false);
+  const [loadingPrompts, setLoadingPrompts] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   // Inline title editing state
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
@@ -144,9 +150,8 @@ export default function Home() {
   };
 
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
+  const sendMessage = async (text: string) => {
+    if (!text.trim()) return;
 
     const wasEmpty = messages.length === 0;
 
@@ -174,27 +179,29 @@ export default function Home() {
             })),
           ];
         }),
-        { role: "user" as const, parts: [{ text: input }] },
+        { role: "user" as const, parts: [{ text }] },
       ];
 
       const aiResponse = await askGemini(conversation);
       const newMsg = {
-        user: input,
+        user: text,
         ai: aiResponse,
         createdAt: new Date().toISOString(),
       };
       // optimistic update
       setMessages((prev) => [...prev, newMsg]);
+      // if this was the first message, hide starter prompts (conversation started)
+      if (wasEmpty) setPromptsVisible(false);
 
       await fetch(`/api/conversations/${activeConv}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user: input, ai: aiResponse, userId }),
+        body: JSON.stringify({ user: text, ai: aiResponse, userId }),
       });
 
       // If this was the first message, generate a title from it and save it
       if (wasEmpty) {
-        const generated = await generateTitle(input);
+        const generated = await generateTitle(text);
         if (generated) {
           try {
             await fetch(`/api/conversations/${activeConv}?userId=${userId}`, {
@@ -223,6 +230,11 @@ export default function Home() {
     }
     setInput("");
     setLoading(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await sendMessage(input);
   };
 
   return (
@@ -609,38 +621,92 @@ export default function Home() {
           )}
           <form
             onSubmit={handleSubmit}
-            style={{ display: "flex", gap: 8, marginBottom: 24 }}
+            style={{ display: "flex", gap: 8, marginBottom: 8, flexDirection: "column" }}
           >
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your question or comment..."
-              style={{
-                flex: 1,
-                padding: 12,
-                borderRadius: 8,
-                border: "none",
-                background: "var(--color-bg)",
-                color: "var(--color-primary-text)",
-              }}
-              disabled={loading}
-            />
-            <button
-              type="submit"
-              style={{
-                background: "var(--color-primary-yellow)",
-                color: "#151C2F",
-                border: "none",
-                borderRadius: 8,
-                padding: "0 20px",
-                fontWeight: 700,
-                opacity: loading ? 0.6 : 1,
-                cursor: loading ? "not-allowed" : "pointer",
-              }}
-              disabled={loading}
-            >
-              {loading ? "Thinking..." : "Ask"}
-            </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                ref={inputRef}
+                value={input}
+                onFocus={async () => {
+                  // Only show starter prompts if this conversation has no messages yet
+                  if (messages.length === 0) {
+                    setPromptsVisible(true);
+                    if (starterPrompts.length === 0 && !loadingPrompts) {
+                      setLoadingPrompts(true);
+                      const p = await (await import("./gemini")).getStarterPrompts();
+                      setStarterPrompts(p);
+                      setLoadingPrompts(false);
+                    }
+                  } else {
+                    setPromptsVisible(false);
+                  }
+                }}
+                onBlur={() => {
+                  // delay hide so clicks on prompts register
+                  setTimeout(() => setPromptsVisible(false), 150);
+                }}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Type your question or comment..."
+                style={{
+                  flex: 1,
+                  padding: 12,
+                  borderRadius: 8,
+                  border: "none",
+                  background: "var(--color-bg)",
+                  color: "var(--color-primary-text)",
+                }}
+                disabled={loading}
+              />
+              <button
+                type="submit"
+                style={{
+                  background: "var(--color-primary-yellow)",
+                  color: "#151C2F",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "0 20px",
+                  fontWeight: 700,
+                  opacity: loading ? 0.6 : 1,
+                  cursor: loading ? "not-allowed" : "pointer",
+                }}
+                disabled={loading}
+              >
+                {loading ? "Thinking..." : "Ask"}
+              </button>
+            </div>
+
+            {promptsVisible && (
+              <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                {loadingPrompts ? (
+                  <div style={{ color: "var(--color-secondary-text)" }}>Loading suggestions…</div>
+                ) : (
+                  (starterPrompts || []).map((p, i) => (
+                    <button
+                      key={i}
+                      onMouseDown={(e) => {
+                        // prevent input blur before click
+                        e.preventDefault();
+                        if (loading) return;
+                        setPromptsVisible(false);
+                        sendMessage(p);
+                      }}
+                      style={{
+                        background: "#f3f4f6",
+                        border: "1px solid #e5e7eb",
+                        padding: "6px 10px",
+                        borderRadius: 999,
+                        cursor: loading ? "not-allowed" : "pointer",
+                        fontSize: 13,
+                        color: "#111827",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {p}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
           </form>
           <div
             style={{
