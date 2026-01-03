@@ -1,4 +1,5 @@
 "use client";
+import { FaPencilAlt, FaTrash } from "react-icons/fa";
 import React, { useState, useEffect, useRef } from "react";
 import type { Message } from "../types/message";
 import Image from "next/image";
@@ -302,6 +303,8 @@ export default function Home() {
                 borderRadius: 8,
                 padding: "6px 10px",
                 cursor: "pointer",
+                color: "#222", // Make text darker
+                fontWeight: 700,
               }}
             >
               New
@@ -322,7 +325,7 @@ export default function Home() {
                   textAlign: "left",
                   background:
                     activeConv === c._id
-                      ? "rgba(255, 223, 99, 0.15)"
+                      ? "#0B1020" // darker blue for selected conversation
                       : "transparent",
                   border: "none",
                   padding: "8px 6px",
@@ -367,12 +370,23 @@ export default function Home() {
                         autoFocus
                         maxLength={80}
                       />
+                      {/* Save and Cancel buttons replaced with icons */}
                       <button
                         type="submit"
                         disabled={editingSaving}
-                        style={{ padding: "6px 8px", borderRadius: 6 }}
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          color: "#888",
+                          cursor: "pointer",
+                          padding: 2,
+                          fontSize: 16,
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                        title="Save title"
                       >
-                        {editingSaving ? "Saving..." : "Save"}
+                        {editingSaving ? <FaPencilAlt /> : <FaPencilAlt />}
                       </button>
                       <button
                         type="button"
@@ -380,9 +394,19 @@ export default function Home() {
                           e.stopPropagation();
                           setEditingTitleId(null);
                         }}
-                        style={{ padding: "6px 8px", borderRadius: 6 }}
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          color: "var(--color-warning)",
+                          cursor: "pointer",
+                          padding: 2,
+                          fontSize: 16,
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                        title="Cancel editing"
                       >
-                        Cancel
+                        <FaTrash />
                       </button>
                     </form>
                   ) : (
@@ -419,91 +443,65 @@ export default function Home() {
                             border: "none",
                             color: "var(--color-primary-yellow)",
                             cursor: "pointer",
-                            padding: 0,
+                            padding: 2,
+                            fontSize: 16,
+                            display: "flex",
+                            alignItems: "center",
                           }}
+                          title="Edit title"
                         >
-                          Edit
+                          <FaPencilAlt />
+                        </button>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (
+                              !confirm(
+                                "Delete this conversation? The duck will no longer remember anything from this conversation once it's deleted."
+                              )
+                            )
+                              return;
+                            try {
+                              const res = await fetch(
+                                `/api/conversations/${c._id}?userId=${userId}`,
+                                {
+                                  method: "DELETE",
+                                }
+                              );
+                              if (!res.ok) throw new Error("Delete failed");
+                              setConversations((prev) =>
+                                prev.filter((x) => x._id !== c._id)
+                              );
+                              if (activeConv === c._id)
+                                setActiveConv(
+                                  conversations.length
+                                    ? conversations[0]._id
+                                    : null
+                                );
+                            } catch (err) {
+                              console.error(err);
+                              alert("Failed to delete conversation");
+                            }
+                          }}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            color: "var(--color-warning)",
+                            cursor: "pointer",
+                            padding: 2,
+                            fontSize: 16,
+                            display: "flex",
+                            alignItems: "center",
+                          }}
+                          title="Delete conversation"
+                        >
+                          <FaTrash />
                         </button>
                       </div>
                     </>
                   )}
                 </div>
-                <div style={{ marginTop: 6 }}>
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      if (
-                        !confirm(
-                          "Delete this conversation? The duck will no longer remember anything from this conversation once it's deleted."
-                        )
-                      )
-                        return;
-                      try {
-                        const res = await fetch(
-                          `/api/conversations/${c._id}?userId=${userId}`,
-                          {
-                            method: "DELETE",
-                          }
-                        );
-                        if (!res.ok) throw new Error("Delete failed");
-                        setConversations((prev) =>
-                          prev.filter((x) => x._id !== c._id)
-                        );
-                        if (activeConv === c._id)
-                          setActiveConv(
-                            conversations.length ? conversations[0]._id : null
-                          );
-                      } catch (err) {
-                        console.error(err);
-                        alert("Failed to delete conversation");
-                      }
-                    }}
-                    onKeyDown={async (e) => {
-                      if (e.key !== "Enter" && e.key !== " ") return;
-                      e.stopPropagation();
-                      if (
-                        !confirm(
-                          "Delete this conversation? The duck will no longer remember anything from this conversation once it's deleted."
-                        )
-                      )
-                        return;
-                      try {
-                        const res = await fetch(
-                          `/api/conversations/${c._id}?userId=${userId}`,
-                          {
-                            method: "DELETE",
-                          }
-                        );
-                        if (!res.ok) throw new Error("Delete failed");
-                        setConversations((prev) =>
-                          prev.filter((x) => x._id !== c._id)
-                        );
-                        if (activeConv === c._id)
-                          setActiveConv(
-                            conversations.length ? conversations[0]._id : null
-                          );
-                      } catch (err) {
-                        console.error(err);
-                        alert("Failed to delete conversation");
-                      }
-                    }}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      color: "var(--color-warning)",
-                      cursor: "pointer",
-                      padding: 0,
-                      font: "inherit",
-                      outline: "none",
-                      textDecoration: "underline",
-                      display: "inline-block",
-                    }}
-                  >
-                    Delete
-                  </span>
-                </div>
+                {/* Removed extra trash can icon below the conversation title */}
               </div>
             ))}
           </div>
@@ -527,27 +525,7 @@ export default function Home() {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-              <h2 style={{ margin: 0 }}>
-                {conversations.find((c) => c._id === activeConv)?.title ??
-                  "New Chat"}
-              </h2>
-              <button
-                onClick={() => setAhaModal(true)}
-                style={{
-                  background: "var(--color-primary-yellow)",
-                  color: "#151C2F",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "4px 14px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  fontSize: 15,
-                }}
-              >
-                🎉 Aha Moment
-              </button>
-            </div>
-            <div style={{ color: "var(--color-secondary-text)", fontSize: 13 }}>
+              {/* Removed extra trash can icon below the conversation title */}
               {messages.length} messages
             </div>
           </div>
