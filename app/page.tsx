@@ -612,8 +612,8 @@ export default function Home() {
             </div>
           )}
           <Image
-            src="/DuckTypeLogo.png"
-            alt="DuckType Logo"
+            src="/QuackBackLogo.png"
+            alt="QuackBack Logo"
             width={500}
             height={500}
             style={{
