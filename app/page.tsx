@@ -28,6 +28,28 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Rotating loading message while Gemini is processing
+  const loadingMessages = [
+    "Duck is thinking...",
+    "Duck is formulating questions...",
+    "Duck is brainstorming...",
+  ];
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (loading) {
+      timer = setInterval(() => {
+        setLoadingMessageIndex((i) => (i + 1) % loadingMessages.length);
+      }, 1000);
+    } else {
+      setLoadingMessageIndex(0);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [loading]);
+
   // Starter prompts state
   const [starterPrompts, setStarterPrompts] = useState<string[]>([]);
   const [promptsVisible, setPromptsVisible] = useState(false);
@@ -727,6 +749,13 @@ export default function Home() {
                     </button>
                   ))
                 )}
+              </div>
+            )}
+
+            {/* Dynamic loading message shown while the Duck is thinking */}
+            {loading && (
+              <div style={{ color: "var(--color-secondary-text)", fontSize: 13, marginTop: 8 }} aria-live="polite">
+                {loadingMessages[loadingMessageIndex]}
               </div>
             )}
           </form>
